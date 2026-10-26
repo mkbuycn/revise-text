@@ -1,0 +1,14 @@
+{
+  "targets": ["tasks/*/instruction.md"],
+  "enforce": false,
+  "pass_threshold": 0.5,
+  "check_draft": true,
+  "stealth_attempts": 2,
+  "retries": 1,
+  "length_ratio": [0.8, 1.25],
+  "min_words": 50,
+  "log_text": true,
+  "pangram_model": "pangram-4.1",
+  "stealth_model": "super",
+  "stealth_via": "mcp"
+}

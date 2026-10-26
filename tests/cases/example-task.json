@@ -1,0 +1,11 @@
+{
+  "id": "example-task",
+  "draft": "Your job is to summarize the application logs in `/data/logs`. Create `/out/summary.csv` with three columns: `ts`, `level` and `count`. Only lines at level `ERROR` or `WARN` count; everything else is ignored. Group by minute, so `ts` is the minute the lines were written, formatted like `2026-10-26T10:42`. The file may hold at most 200 rows, newest first. If there are more minutes than that, keep the newest 200 and drop the rest. Write a header row. Don't include minutes with a count of zero. The logs rotate, so read every file in the folder, including the compressed ones ending in `.gz`.",
+  "requirements": [
+    "R1: the logs are in `/data/logs`, including `.gz` files",
+    "R2: write `/out/summary.csv` with columns `ts`, `level`, `count` and a header row",
+    "R3: count only `ERROR` and `WARN` lines, grouped by minute",
+    "R4: at most 200 rows, newest first; no zero-count rows"
+  ],
+  "word_range": [90, 140]
+}

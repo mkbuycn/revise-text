@@ -1,0 +1,14 @@
+{
+  "name": "revise-text",
+  "description": "revise-text: revise generated Markdown with a Pangram check, StealthGPT fallback and a meaning check.",
+  "owner": {
+    "name": "Mike"
+  },
+  "plugins": [
+    {
+      "name": "revise-text",
+      "source": "./",
+      "description": "Revise generated Markdown so it reads as naturally written: Pangram check, StealthGPT fallback, and a meaning check against a spec."
+    }
+  ]
+}

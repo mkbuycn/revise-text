@@ -1,0 +1,8 @@
+{
+  "name": "revise-text",
+  "version": "0.1.0",
+  "description": "Revise generated Markdown so it reads as naturally written: Pangram check, StealthGPT fallback, and a meaning check against a spec.",
+  "author": {"name": "Mike"},
+  "license": "MIT",
+  "keywords": ["writing", "markdown", "pangram", "humanize"]
+}

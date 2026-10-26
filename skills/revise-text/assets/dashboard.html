@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>revise-text dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10); --wash: rgba(11,11,11,0.04);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+  --good: #006300; --bad: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+    --good: #0ca30c; --bad: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  --good: #0ca30c; --bad: #e66767;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 0 0 2px; }
+.sub { color: var(--ink2); margin: 0 0 12px; font-size: 13px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0 20px; }
+.filters label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--ink2); }
+select, input[type=search] { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; min-width: 120px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 16px; }
+.hbars { display: grid; gap: 6px; margin: 6px 0; }
+.hrow { display: grid; grid-template-columns: minmax(80px, 38%) 1fr; gap: 10px; align-items: center; font-size: 12px; outline: none; }
+.hrow:hover .mark, .hrow:focus .mark { opacity: .75; }
+.hl { color: var(--ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.ht { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ht i { display: block; height: 16px; border-radius: 0 4px 4px 0; max-width: calc(100% - 48px); }
+.ht b { font-weight: 500; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+.wide { grid-column: 1 / -1; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.tile .label { color: var(--ink2); font-size: 12px; }
+.tile .value { font-size: 24px; font-weight: 600; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink2); margin: 6px 0 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+svg { display: block; width: 100%; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .val { fill: var(--ink2); }
+.mark { transition: opacity .1s; }
+.hit:hover + .mark, .hit:focus + .mark { opacity: .75; }
+.hit { fill: transparent; cursor: default; outline: none; }
+details { margin-top: 8px; font-size: 12px; color: var(--ink2); }
+summary { cursor: pointer; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+#runs tbody tr { cursor: pointer; }
+#runs tbody tr:hover, #runs tbody tr:focus { background: var(--wash); outline: none; }
+#runs tbody tr.sel { background: var(--wash); box-shadow: inset 3px 0 0 var(--s1); }
+.badge { display: inline-block; padding: 0 6px; border-radius: 4px; border: 1px solid var(--border); font-size: 11px; }
+.pre { white-space: pre-wrap; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--page); border: 1px solid var(--border); border-radius: 6px; padding: 10px; max-height: 360px; overflow: auto; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.empty { color: var(--ink2); padding: 24px 0; }
+code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; z-index: 10; max-width: 280px; }
+#tip .t { color: var(--ink2); margin-bottom: 4px; }
+#tip .r { display: flex; align-items: center; gap: 8px; }
+#tip .r b { font-variant-numeric: tabular-nums; }
+#tip .k { width: 12px; height: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>revise-text</h1>
+  <p class="sub" id="span"></p>
+  <div id="app"></div>
+</main>
+<div id="tip" role="status"></div>
+<script>
+const RUNS = /*__RUNS__*/[];
+
+// ---------- helpers ----------
+const SVG = "http://www.w3.org/2000/svg";
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+}
+function s(tag, attrs, text) {
+  const e = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  return e;
+}
+const pct = x => x == null || isNaN(x) ? "–" : Math.round(x * 100) + "%";
+const usd = x => "$" + (x >= 100 ? Math.round(x).toLocaleString() : x.toFixed(2));
+const num = x => x >= 1000 ? (x / 1000).toFixed(x >= 10000 ? 0 : 1) + "K" : String(Math.round(x * 100) / 100);
+const share = (n, d) => d ? n / d : null;
+const median = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+const day = ts => ts.slice(0, 10);
+function week(ts) { const d = new Date(ts.slice(0, 10) + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); }
+const pattern = p => p.split("/").map(x => /\d/.test(x) && !/\./.test(x) ? "*" : x).join("/");
+function niceMax(m) { if (m <= 0) return 1; const p = 10 ** Math.floor(Math.log10(m)), n = m / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+const cssVar = n => `var(--${n})`;
+
+// one tooltip; values lead, labels follow
+const tip = document.getElementById("tip");
+function showTip(ev, title, rows) {
+  tip.replaceChildren(h("div", { class: "t" }, title),
+    ...rows.map(r => h("div", { class: "r" }, r.color ? h("i", { class: "k", style: `background:${r.color}` }) : null, h("b", {}, r.value), h("span", {}, r.label || ""))));
+  tip.style.display = "block";
+  const rect = ev.target.getBoundingClientRect ? ev.target.getBoundingClientRect() : { left: 0, top: 0, width: 0 };
+  const x = ev.clientX ?? rect.left + rect.width / 2, y = ev.clientY ?? rect.top;
+  const w = tip.offsetWidth, ht = tip.offsetHeight;
+  tip.style.left = Math.min(window.innerWidth - w - 8, Math.max(8, x + 12)) + "px";
+  tip.style.top = (y - ht - 12 < 8 ? y + 16 : y - ht - 12) + "px";
+}
+const hideTip = () => { tip.style.display = "none"; };
+function hover(node, title, rows) {
+  node.setAttribute("tabindex", "0");
+  node.setAttribute("aria-label", title + ": " + rows.map(r => `${r.label || ""} ${r.value}`).join(", "));
+  node.addEventListener("pointermove", e => showTip(e, title, rows));
+  node.addEventListener("focus", e => showTip(e, title, rows));
+  node.addEventListener("pointerleave", hideTip);
+  node.addEventListener("blur", hideTip);
+}
+// bars: square at the baseline, 4px rounded data end
+function colPath(x, y, w, ht) { const r = Math.min(4, w / 2, ht); return `M${x},${y + ht}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + ht}Z`; }
+function barPath(x, y, w, ht) { const r = Math.min(4, ht / 2, w); return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + ht - r}Q${x + w},${y + ht} ${x + w - r},${y + ht}H${x}Z`; }
+
+function tableView(head, rows) {
+  return h("details", {}, h("summary", {}, "Table view"),
+    h("div", { class: "scroll" }, h("table", {}, h("thead", {}, h("tr", {}, head.map((c, i) => h("th", { class: i ? "num" : "" }, c)))),
+      h("tbody", {}, rows.map(r => h("tr", {}, r.map((c, i) => h("td", { class: i ? "num" : "" }, c))))))));
+}
+function legend(items) { return h("div", { class: "legend" }, items.map(i => h("span", {}, h("i", { style: `background:${i.color}` }), i.label))); }
+
+// horizontal bars, one series; HTML rows so text keeps its size in narrow cards
+function hbars(items, fmt = num) {
+  if (!items.length) return h("div", { class: "empty" }, "Nothing in this range.");
+  const max = Math.max(...items.map(i => i.value)) || 1;
+  const rows = items.map(it => {
+    const row = h("div", { class: "hrow" }, h("span", { class: "hl", title: it.label }, it.label),
+      h("span", { class: "ht" }, h("i", { class: "mark", style: `width:${Math.max(0.5, 100 * it.value / max)}%;background:${it.color || cssVar("s1")}` }),
+        h("b", {}, fmt(it.value))));
+    hover(row, it.label, [{ value: fmt(it.value), label: it.note || "" }]);
+    return row;
+  });
+  return h("div", {}, h("div", { class: "hbars" }, rows), tableView(["Item", "Value"], items.map(i => [i.label, fmt(i.value)])));
+}
+
+// vertical columns, one series, with a y axis
+function columns(points, fmt = num, unit = "") {
+  const box = h("div");
+  if (!points.length) return h("div", { class: "empty" }, "Nothing in this range.");
+  const W = 560, H = 200, L = 40, B = 22, T = 8;
+  const max = niceMax(Math.max(...points.map(p => p.value)));
+  const band = (W - L) / points.length, bw = Math.min(24, band * 0.7);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+  for (const t of [0, .5, 1]) {
+    const y = T + (H - T - B) * (1 - t);
+    svg.append(s("line", { x1: L, x2: W, y1: y, y2: y, stroke: t ? cssVar("grid") : cssVar("axis") }));
+    svg.append(s("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, fmt(max * t)));
+  }
+  const every = Math.ceil(points.length / 8);
+  points.forEach((p, k) => {
+    const x = L + band * k + (band - bw) / 2, ht = (H - T - B) * p.value / max;
+    const hit = s("rect", { class: "hit", x: L + band * k, y: T, width: band, height: H - T - B });
+    svg.append(hit, s("path", { class: "mark", d: colPath(x, H - B - ht, bw, Math.max(ht, 0.5)), fill: cssVar("s1") }));
+    if (k % every === 0 || k === points.length - 1) svg.append(s("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }, p.label.slice(5)));
+    hover(hit, p.label, [{ value: fmt(p.value), label: unit }]);
+  });
+  box.append(svg, tableView(["Date", unit || "Value"], points.map(p => [p.label, fmt(p.value)])));
+  return box;
+}
+
+// 100% stacked columns with 2px surface gaps
+function stacked(buckets, cats) {
+  const box = h("div");
+  if (!buckets.length) return h("div", { class: "empty" }, "Nothing in this range.");
+  const W = 560, H = 210, L = 40, B = 22, T = 8, gap = 2;
+  const band = (W - L) / buckets.length, bw = Math.min(24, band * 0.7);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+  for (const t of [0, .5, 1]) {
+    const y = T + (H - T - B) * (1 - t);
+    svg.append(s("line", { x1: L, x2: W, y1: y, y2: y, stroke: t ? cssVar("grid") : cssVar("axis") }));
+    svg.append(s("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, pct(t)));
+  }
+  const every = Math.ceil(buckets.length / 8);
+  buckets.forEach((b, k) => {
+    const total = cats.reduce((a, c) => a + (b.parts[c.key] || 0), 0);
+    const x = L + band * k + (band - bw) / 2;
+    let y = H - B;
+    const present = cats.filter(c => b.parts[c.key]);
+    present.forEach((c, i) => {
+      const ht = (H - T - B) * b.parts[c.key] / total;
+      // every segment but the top one leaves a 2px surface gap above it; only the top gets the rounded end
+      const d = i === present.length - 1 ? colPath(x, y - ht, bw, Math.max(ht, 0.5))
+                                         : `M${x},${y}V${y - ht + gap}H${x + bw}V${y}Z`;
+      svg.append(s("path", { class: "mark", d, fill: c.color }));
+      y -= ht;
+    });
+    const hit = s("rect", { class: "hit", x: L + band * k, y: T, width: band, height: H - T - B });
+    svg.insertBefore(hit, svg.firstChild);
+    if (k % every === 0 || k === buckets.length - 1) svg.append(s("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }, b.label.slice(5)));
+    hover(hit, `Week of ${b.label} · ${total} regions`, cats.filter(c => b.parts[c.key]).map(c => ({ value: pct(b.parts[c.key] / total), label: `${c.label} (${b.parts[c.key]})`, color: c.color })));
+  });
+  box.append(legend(cats), svg,
+    tableView(["Week", ...cats.map(c => c.label)], buckets.map(b => [b.label, ...cats.map(c => b.parts[c.key] || 0)])));
+  return box;
+}
+
+// scatter: draft vs final Pangram AI score, one series
+function scatter(points, threshold) {
+  const box = h("div");
+  if (!points.length) return h("div", { class: "empty" }, "No regions with both a draft and a final Pangram score in this range.");
+  const W = 420, H = 300, L = 40, B = 34, T = 8, R = 8;
+  const X = v => L + (W - L - R) * v, Y = v => T + (H - T - B) * (1 - v);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", style: "max-width:520px" });
+  for (const t of [0, .25, .5, .75, 1]) {
+    svg.append(s("line", { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t ? cssVar("grid") : cssVar("axis") }));
+    svg.append(s("text", { x: L - 6, y: Y(t) + 4, "text-anchor": "end" }, t.toFixed(2)));
+    svg.append(s("text", { x: X(t), y: H - B + 16, "text-anchor": "middle" }, t.toFixed(2)));
+  }
+  svg.append(s("line", { x1: L, x2: W - R, y1: Y(threshold), y2: Y(threshold), stroke: cssVar("muted") }));
+  svg.append(s("text", { x: L + 4, y: Y(threshold) - 4 }, `pass below ${threshold}`));
+  svg.append(s("text", { x: (L + W) / 2, y: H - 2, "text-anchor": "middle" }, "Draft AI score →"));
+  svg.append(s("text", { x: L + 4, y: T + 12 }, "↑ Final AI score"));
+  for (const p of points) {
+    const g = s("g");
+    g.append(s("circle", { class: "hit", cx: X(p.x), cy: Y(p.y), r: 12 }));
+    g.append(s("circle", { class: "mark", cx: X(p.x), cy: Y(p.y), r: 4.5, fill: cssVar("s1"), stroke: cssVar("surface"), "stroke-width": 2 }));
+    svg.append(g);
+    hover(g.firstChild, p.label, [{ value: p.x.toFixed(2), label: "draft" }, { value: p.y.toFixed(2), label: "final" }]);
+  }
+  box.append(svg, tableView(["Region", "Draft", "Final"], points.map(p => [p.label, p.x.toFixed(2), p.y.toFixed(2)])));
+  return box;
+}
+
+function table(head, rows, numeric = []) {
+  if (!rows.length) return h("div", { class: "empty" }, "Nothing in this range.");
+  return h("div", { class: "scroll" }, h("table", {}, h("thead", {}, h("tr", {}, head.map((c, i) => h("th", { class: numeric.includes(i) ? "num" : "" }, c)))),
+    h("tbody", {}, rows.map(r => h("tr", {}, r.map((c, i) => h("td", { class: numeric.includes(i) ? "num" : "" }, c)))))));
+}
+function card(title, sub, ...body) { return h("section", { class: "card" }, h("h2", {}, title), sub ? h("p", { class: "sub" }, sub) : null, ...body); }
+
+// ---------- data: join runs and verifies, group retries into one region ----------
+const runs = RUNS.filter(r => r.type === "run")
+  .map(r => ({ steps: [], plugin_version: "unknown", humanize_writing_commit: "unknown", mode: "inline", source: "?", region: "?", ...r }))
+  .sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+const verifies = {};
+// older versions logged "not verified" for regions that got no verdict; those aren't verdicts
+const isVerdict = v => v.verified || v.final || !(v.mismatches || []).every(m => m === "not verified");
+for (const v of RUNS.filter(r => r.type === "verify" && isVerdict(r))) (verifies[v.run_id] ||= []).push(v);
+const byId = Object.fromEntries(runs.map(r => [r.run_id, r]));
+const rootOf = r => {                                    // the seen set stops a hand-edited history from looping
+  const seen = new Set([r.run_id]); let x = r;
+  while (x.retry_of && byId[x.retry_of] && !seen.has(x.retry_of)) { x = byId[x.retry_of]; seen.add(x.run_id); }
+  return x;
+};
+const chainMap = new Map();
+for (const r of runs) { const root = rootOf(r); if (!chainMap.has(root.run_id)) chainMap.set(root.run_id, []); chainMap.get(root.run_id).push(r); }
+
+const WHERE = [
+  { key: "Draft", label: "Draft", color: cssVar("s1") },
+  { key: "Attempt 1", label: "StealthGPT 1", color: cssVar("s2") },
+  { key: "Attempt 2", label: "StealthGPT 2+", color: cssVar("s3") },
+  { key: "Retry", label: "Retry", color: cssVar("s4") },
+  { key: "REVIEW", label: "Review", color: cssVar("s5") },
+  { key: "SHORT", label: "Short", color: cssVar("s6") },
+  { key: "ERROR", label: "Error", color: cssVar("s7") },
+];
+const chains = [...chainMap.values()].map(rs => {
+  const root = rs[0], last = rs[rs.length - 1];
+  const vs = rs.flatMap(r => (verifies[r.run_id] || []).map(v => ({ ...v, mode: r.mode }))).sort((a, b) => a.ts.localeCompare(b.ts));
+  let where = last.result;
+  if (last.result === "PASS") where = last.mode === "retry" ? "Retry" : { draft: "Draft", stealth_1: "Attempt 1" }[last.passed_at] || "Attempt 2";
+  const rootV = verifies[root.run_id] || [];
+  let verification = "Not verified yet";
+  if (rootV.length && rootV[0].verified) verification = "First try";
+  else if (vs.some(v => v.verified && v.mode === "retry")) verification = "After a retry";
+  else if (vs.some(v => v.verified)) verification = "On a later check";
+  else if (vs.some(v => v.final)) verification = "Kept draft (--final)";
+  else if (vs.length) verification = "Mismatch, open";
+  const steps = rs.flatMap(r => r.steps.map(st => ({ ...st, run: r.mode })));
+  return {
+    id: root.run_id, rs, root, last, vs, where, verification, steps,
+    ts: root.ts, source: root.source, region: root.region, select: root.select || "unknown", mode: root.mode,
+    version: `${root.plugin_version} · ${String(root.humanize_writing_commit).slice(0, 7)}`,
+    pass: last.result === "PASS",
+    draftAI: (root.steps.find(st => st.step === "draft") || {}).pangram_ai,
+    finalAI: last.best_pangram_ai,
+    cost: rs.reduce((a, r) => a + (r.stealth_cost_usd || 0), 0),
+    planWords: rs.reduce((a, r) => a + (r.stealth_subscription_words || 0), 0),
+    checks: rs.reduce((a, r) => a + (r.pangram_checks || 0), 0),
+    mismatches: vs.flatMap(v => v.mismatches).filter(m => m && m !== "not verified"),
+  };
+}).sort((a, b) => b.ts.localeCompare(a.ts));
+
+// ---------- filters ----------
+const state = { range: "all", result: "", mode: "", file: "", version: "", selected: null };
+const uniq = a => [...new Set(a)].sort();
+function filtered() {
+  const cutoff = state.range === "all" ? "" : new Date(Date.now() - (+state.range) * 864e5).toISOString();
+  return chains.filter(c => c.ts >= cutoff && (!state.result || c.where === state.result) && (!state.mode || c.mode === state.mode)
+    && (!state.version || c.version === state.version) && (!state.file || c.source.toLowerCase().includes(state.file.toLowerCase())));
+}
+function selectBox(label, key, options) {
+  const sel = h("select", { onchange: e => { state[key] = e.target.value; render(); } },
+    options.map(([v, t]) => { const o = h("option", { value: v }, t); if (state[key] === v) o.selected = true; return o; }));
+  return h("label", {}, label, sel);
+}
+function filterRow() {
+  return h("div", { class: "filters" },
+    selectBox("Date range", "range", [["all", "All time"], ["1", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"]]),
+    selectBox("Result", "result", [["", "All results"], ...WHERE.map(w => [w.key, w.key === "REVIEW" ? "Review" : w.label])]),
+    selectBox("Mode", "mode", [["", "All modes"], ...uniq(chains.map(c => c.mode)).map(m => [m, m])]),
+    selectBox("Version", "version", [["", "All versions"], ...uniq(chains.map(c => c.version)).map(v => [v, v])]),
+    h("label", {}, "File", h("input", { type: "search", placeholder: "path contains…", value: state.file,
+      onchange: e => { state.file = e.target.value; render(); } })));
+}
+
+// ---------- sections ----------
+// a region needs a person's look when Pangram never passed it or its draft was kept after a mismatch
+const needsReview = c => c.last.result === "REVIEW" || c.verification === "Kept draft (--final)";
+function tiles(F) {
+  const verifiedAny = F.filter(c => c.vs.length);
+  const ok = verifiedAny.filter(c => ["First try", "After a retry", "On a later check"].includes(c.verification));
+  const review = F.filter(needsReview);
+  const tile = (label, value, note) => h("div", { class: "tile" }, h("div", { class: "label" }, label), h("div", { class: "value" }, value), note ? h("div", { class: "note" }, note) : null);
+  return h("div", { class: "tiles" },
+    tile("Regions revised", F.length.toLocaleString(), `${uniq(F.map(c => c.source)).length} files`),
+    tile("Pangram pass rate", pct(share(F.filter(c => c.pass).length, F.length))),
+    tile("Meaning verified", pct(share(ok.length, verifiedAny.length)), `of ${verifiedAny.length} checked`),
+    tile("Sent to review", pct(share(review.length, F.length)), `${review.length} regions`),
+    tile("StealthGPT cost", usd(F.reduce((a, c) => a + c.cost, 0)), "API credits"),
+    tile("Plan words used", F.reduce((a, c) => a + c.planWords, 0).toLocaleString(), "StealthGPT subscription"),
+    tile("Pangram checks", F.reduce((a, c) => a + c.checks, 0).toLocaleString()));
+}
+function wherePass(F) {
+  const weeks = {};
+  for (const c of F) { const w = weeks[week(c.ts)] ||= {}; w[c.where] = (w[c.where] || 0) + 1; }
+  const buckets = Object.keys(weeks).sort().map(k => ({ label: k, parts: weeks[k] }));
+  return card("Where regions pass", "Share of regions by the step that passed Pangram, or how they ended, per week.", stacked(buckets, WHERE));
+}
+// the pass line: the threshold the newest run in view was checked against
+const threshold = F => (F.find(c => c.last.pass_threshold != null) || { last: { pass_threshold: 0.5 } }).last.pass_threshold;
+function beforeAfter(F, threshold) {
+  const pts = F.filter(c => c.draftAI != null && c.finalAI != null).map(c => ({ x: c.draftAI, y: c.finalAI, label: `${c.source} · ${c.region}` }));
+  const md = median(pts.map(p => p.x)), mf = median(pts.map(p => p.y));
+  return card("Pangram before and after", pts.length ? `Median AI score ${md.toFixed(2)} on the draft, ${mf.toFixed(2)} on the final text.` : "", scatter(pts, threshold));
+}
+function meaning(F) {
+  const order = ["First try", "After a retry", "On a later check", "Kept draft (--final)", "Mismatch, open", "Not verified yet"];
+  const counts = order.map(k => ({ label: k, value: F.filter(c => c.verification === k).length })).filter(i => i.value);
+  const byReq = {};
+  for (const c of F) for (const m of c.mismatches) { const k = (m.match(/^R\d+/) || ["(no id)"])[0]; (byReq[k] ||= []).push(m); }
+  const top = Object.entries(byReq).sort((a, b) => b[1].length - a[1].length).slice(0, 8);
+  return card("Meaning checks", "How each region's verification ended, and which requirements most often stopped matching.",
+    hbars(counts),
+    h("h2", { style: "margin-top:14px" }, "Requirements that stopped matching"),
+    table(["Requirement", "Times", "Latest example"], top.map(([k, ms]) => [k, ms.length, ms[ms.length - 1]]), [1]));
+}
+function groupTable(F, keyFn, label) {
+  const g = {};
+  for (const c of F) (g[keyFn(c)] ||= []).push(c);
+  return table([label, "Regions", "Pass", "Verified", "Review", "Cost"], Object.entries(g).sort((a, b) => b[1].length - a[1].length).map(([k, cs]) => {
+    const vd = cs.filter(c => c.vs.length);
+    return [k, cs.length, pct(share(cs.filter(c => c.pass).length, cs.length)),
+      pct(share(vd.filter(c => ["First try", "After a retry", "On a later check"].includes(c.verification)).length, vd.length)),
+      pct(share(cs.filter(needsReview).length, cs.length)), usd(cs.reduce((a, c) => a + c.cost, 0))];
+  }), [1, 2, 3, 4, 5]);
+}
+function byMode(F) {
+  const retries = F.filter(c => c.rs.length > 1);
+  return card("By mode and input", `${retries.length} regions needed a retry.`,
+    groupTable(F, c => c.mode, "Mode"), h("div", { style: "height:12px" }),
+    groupTable(F, c => pattern(c.source), "Target pattern"), h("div", { style: "height:12px" }),
+    groupTable(F, c => c.select, "Region type"));
+}
+function byVersion(F) { return card("By version", "Plugin version · bundled humanize-writing commit.", groupTable(F, c => c.version, "Version")); }
+function rejections(F) {
+  const steps = F.flatMap(c => c.steps).filter(st => st.rejected);
+  const reasons = {}, kinds = {}, changes = {};
+  const change = u => /^added /.test(u) ? "added item" : /became/.test(u) ? "sign or suffix next to an item"
+    : /no longer on its own line/.test(u) ? "block moved off its line" : /lost a blank line/.test(u) ? "blank line lost"
+    : /reordered/.test(u) ? "items reordered" : /another section|changed order/.test(u) ? "moved across sections"
+    : /^\[\[/.test(u) ? "invented token" : "other";
+  const kind = i => /^`/.test(i) ? "code" : /^https?:/.test(i) ? "URL" : /^\//.test(i) ? "path" : /^\d/.test(i) ? "number" : /^#/.test(i) ? "heading" : /^\|/.test(i) ? "table row" : "other";
+  for (const st of steps) {
+    reasons[st.rejected] = (reasons[st.rejected] || 0) + 1;
+    for (const i of st.missing || []) kinds[kind(i)] = (kinds[kind(i)] || 0) + 1;
+    for (const u of st.unexpected || []) changes[change(u)] = (changes[change(u)] || 0) + 1;
+  }
+  const attempts = F.flatMap(c => c.steps).filter(st => st.step.startsWith("stealth")).length;
+  const ratios = F.flatMap(c => c.steps).filter(st => st.length_ratio != null).map(st => st.length_ratio);
+  return card("Why StealthGPT attempts are rejected", `${steps.length} of ${attempts} attempts rejected before Pangram${ratios.length ? ` · median length ratio ${median(ratios).toFixed(2)}` : ""}.`,
+    hbars(Object.entries(reasons).map(([k, v]) => ({ label: k, value: v }))),
+    h("h2", { style: "margin-top:14px" }, "Kinds of exact items lost"),
+    hbars(Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v }))),
+    h("h2", { style: "margin-top:14px" }, "Other changes to protected items"),
+    hbars(Object.entries(changes).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v }))));
+}
+function critique(F) {
+  const counts = {};
+  for (const c of F) for (const p of c.root.critique || []) { const k = p.toLowerCase(); counts[k] = (counts[k] || 0) + 1; }
+  const items = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => ({ label: k, value: v, note: `in ${v} of ${F.length} regions` }));
+  return card("Most frequent critique points", "AI tells Claude found while rereading its drafts: candidates for overrides.md.", hbars(items));
+}
+function cost(F) {
+  const days = {};
+  for (const c of F) for (const r of c.rs) { const d = days[day(r.ts)] ||= { usd: 0, checks: 0 }; d.usd += r.stealth_cost_usd || 0; d.checks += r.pangram_checks || 0; }
+  const keys = Object.keys(days).sort();
+  return h("section", { class: "card wide" }, h("h2", {}, "Cost"), h("p", { class: "sub" }, "Per day. The dollar figure is StealthGPT API credits, including metered credits charged on subscription runs; plan words and Pangram charges aren't in it."),
+    h("div", { class: "cols" },
+      h("div", {}, h("div", { class: "sub" }, "StealthGPT spend"), columns(keys.map(k => ({ label: k, value: days[k].usd })), x => usd(x), "USD")),
+      h("div", {}, h("div", { class: "sub" }, "Pangram checks"), columns(keys.map(k => ({ label: k, value: days[k].checks })), num, "checks"))));
+}
+function runsTable(F) {
+  const body = h("tbody");
+  for (const c of F.slice(0, 500)) {
+    const tr = h("tr", { tabindex: "0", class: state.selected === c.id ? "sel" : "",
+      onclick: () => { state.selected = c.id; render(); document.getElementById("detail").scrollIntoView({ behavior: "smooth", block: "nearest" }); },
+      onkeydown: e => { if (e.key === "Enter") tr.click(); } },
+      h("td", {}, c.ts.replace("T", " ").slice(0, 16)), h("td", {}, c.source), h("td", {}, c.region), h("td", {}, c.mode),
+      h("td", {}, h("span", { class: "badge" }, c.where)),
+      h("td", { class: "num" }, `${c.draftAI != null ? c.draftAI.toFixed(2) : "–"} → ${c.finalAI != null ? c.finalAI.toFixed(2) : "–"}`),
+      h("td", {}, c.verification), h("td", { class: "num" }, usd(c.cost)));
+    body.append(tr);
+  }
+  return h("section", { class: "card wide" }, h("h2", {}, "Runs"), h("p", { class: "sub" }, `${F.length} regions${F.length > 500 ? " (newest 500 shown)" : ""}. Click a row for details.`),
+    h("div", { class: "scroll" }, h("table", { id: "runs" }, h("thead", {}, h("tr", {}, ["When (UTC)", "File", "Region", "Mode", "Result", "Pangram AI", "Meaning", "Cost"].map((x, i) => h("th", { class: [5, 7].includes(i) ? "num" : "" }, x)))), body)),
+    detail(chains.find(c => c.id === state.selected)));
+}
+function detail(c) {
+  const box = h("div", { id: "detail" });
+  if (!c) return box;
+  box.append(h("h2", { style: "margin-top:18px" }, `${c.source} · ${c.region}`));
+  for (const r of c.rs) {
+    box.append(h("p", { class: "sub" }, `${r.mode} run ${r.run_id} · ${r.ts} · ${r.result}${r.passed_at ? " at " + r.passed_at : ""}${r.error ? " · " + r.error : ""} · ${r.input_words} words · ${r.exact_items} exact items`));
+    box.append(table(["Step", "Pangram AI", "AI-assisted", "Humanized windows", "Words billed", "Length", "Rejected", "Missing"],
+      r.steps.map(st => [st.step, st.pangram_ai != null ? st.pangram_ai.toFixed(2) : "–", st.pangram_ai_assisted != null ? st.pangram_ai_assisted.toFixed(2) : "–",
+        st.humanized_windows ?? "–", st.words_billed ?? "–", st.length_ratio ?? "–", st.rejected || "", (st.missing || []).join(", ")]), [1, 2, 3, 4, 5]));
+  }
+  if ((c.root.critique || []).length) box.append(h("p", {}, h("b", {}, "Critique: "), c.root.critique.join("; ")));
+  box.append(h("p", {}, h("b", {}, "Verification: "), c.verification + (c.mismatches.length ? " · " + c.mismatches.join("; ") : "")));
+  if (c.root.text_before != null) {
+    box.append(h("div", { class: "cols" },
+      h("div", {}, h("div", { class: "sub" }, "Before"), h("div", { class: "pre" }, c.root.text_before)),
+      h("div", {}, h("div", { class: "sub" }, "After"), h("div", { class: "pre" }, c.last.text_after))));
+  } else box.append(h("p", { class: "sub" }, "Text wasn't logged for this run (log_text is off)."));
+  return box;
+}
+
+function render() {
+  const app = document.getElementById("app");
+  hideTip();
+  if (!chains.length) {
+    app.replaceChildren(h("div", { class: "card empty" }, h("h2", {}, "No history yet"),
+      h("p", {}, "Run revise-text on a file and the history appears here: "), h("p", {}, h("code", {}, "python3 <skill folder>/scripts/rt.py run <file>"), " then ", h("code", {}, "rt.py verify <file> <region>=ok"), ". Rebuild this page with /revise-text:dashboard.")));
+    return;
+  }
+  const F = filtered();
+  const first = chains[chains.length - 1].ts.slice(0, 10), last = chains[0].ts.slice(0, 10);
+  document.getElementById("span").textContent = `${chains.length} regions from ${first} to ${last}. Built from ~/.revise-text/history*.jsonl.`;
+  app.replaceChildren(filterRow(), tiles(F),
+    h("div", { class: "grid" }, wherePass(F), beforeAfter(F, threshold(F)), meaning(F), rejections(F), byMode(F), h("div", { class: "card", style: "padding:0;border:0;background:none;display:grid;gap:16px" }, byVersion(F), critique(F)), cost(F), runsTable(F)));
+}
+render();
+</script>
+</body>
+</html>

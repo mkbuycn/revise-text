@@ -1,0 +1,4 @@
+# add to the project's .gitignore
+.revise-text/work/
+.revise-text/backups/
+.revise-text/paste/

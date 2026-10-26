@@ -1,0 +1,16 @@
+name: check-upstream
+on:
+  schedule: [{cron: "0 9 * * 1"}]
+  workflow_dispatch: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions: {contents: write, pull-requests: write}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 skills/revise-text/scripts/update_vendor.py --apply
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          title: "Update bundled humanize-writing"
+          branch: vendor/humanize-writing
+          body: "New upstream commit. Run the regression test (`python3 tests/regress.py`) on the old and new versions before merging."
