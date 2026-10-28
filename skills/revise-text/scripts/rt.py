@@ -719,7 +719,9 @@ def save(path, rid, spec, res, cfg, **meta):
     print(f"== {path.as_posix()} · {rid} · {result_line(res)}")
     for s in res["steps"]:
         print("  " + " · ".join(f"{k}={v}" for k, v in s.items()))
-    absent = sorted(e for e in spec_items(spec) if e not in res["draft"])  # maybe in another region; check before verifying
+    # with several regions an item can belong to any of them, so only flag what the whole file lacks
+    scope = res["draft"] if len(spec["regions"]) == 1 else Doc(path).text
+    absent = sorted(e for e in spec_items(spec) if e not in scope)
     if absent:
         print(f"  WARNING: your draft is missing these spec items: {absent}")
     wr, words = res.get("word_range"), len(res["draft"].split())

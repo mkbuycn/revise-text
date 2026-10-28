@@ -1341,6 +1341,17 @@ class McpRound9(McpRoute):
         run = self.history()[-1]
         self.assertEqual((run["stealth_cost_usd"], run["stealth_subscription_words"]), (0.005, 40))
 
+    def test_missing_items_warning_looks_at_whole_file_with_several_regions(self):
+        spec = {"regions": [{"id": "a", "select": "## A"}, {"id": "b", "select": "## B"}],
+                "requirements": ["R1: logs in `/data/logs`", "R2: output in `/out/x.csv`", "R3: uses `/etc/gone`"]}
+        self.write("doc.md", "## A\nlogs in /data/logs\n\n## B\noutput in /out/x.csv\n", spec=spec)
+        res = {"steps": [], "run_id": "x", "draft": "logs in /data/logs\n", "out": "logs in /data/logs\n",
+               "items": [], "status": "PASS"}
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rt.save(pathlib.Path("doc.md"), "a", rt.load_spec("doc.md"), res, rt.config(), mode="inline")
+        self.assertIn("missing these spec items: ['/etc/gone']", out.getvalue())
+
 
 class PangramErrors(Project):
     def test_no_credits_explained(self):

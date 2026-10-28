@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `rt run`: with several regions, the "draft is missing these spec items" warning checks the whole file, so
+  items that belong to another region no longer show up as missing in every region.
+
 ## 0.1.0 — 2026-10-26
 
 - First version: `rt` run / verify / retry / backup / status / baseline / guard, Pangram 4 check, StealthGPT
