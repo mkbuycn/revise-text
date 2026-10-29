@@ -58,7 +58,12 @@ balance was billed and whether protected items came through.
 | `rt backup <file>` | Copies the file into `.revise-text/backups/` |
 | `rt status` | Every target file: ok, not revised, or edited after revising (a change inside a revised region, or text added at its edge; blank lines and edits elsewhere in the file don't count). Regions revised by earlier verifies stay tracked, minus any part revised again; a revised region that was deleted is dropped with a note at the next verify |
 | `rt check` | Two small Pangram checks and one StealthGPT rewrite: confirms keys, route and billing, whether protected items come through, and whether the rewrite would pass |
+| `rt pangram [file \| - \| --text="…"]` | Pangram only: scores the text (a file, stdin, or inline) and says whether it would pass. No spec, no stamps |
+| `rt stealth [file \| - \| --text="…"]` | StealthGPT only: one rewrite, printed to stdout (billing to stderr). Paths, numbers and code are protected as in `rt run` and a warning names any that changed |
 | `rt baseline [file …]` | Stamps files as they are, without revising them: the named files (replacing their stamps, e.g. to accept a hand edit), or else every target file never stamped |
+
+In a Claude session, `/revise-text:check <file | text>` runs `rt pangram` and `/revise-text:rewrite <file | text>`
+runs `rt stealth`, with text typed after the command passed as is.
 
 For one-off use, ask in the prompt: "Write the README, then run revise-text on the Overview and Motivation
 sections only."

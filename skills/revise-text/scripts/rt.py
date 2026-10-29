@@ -1135,8 +1135,61 @@ def cmd_check(_):
         print("  NOTE: this run was billed to API credits. To use your subscription, set MCP billing to it in "
               "StealthGPT's usage settings.")
 
+def input_text(args, usage):
+    """The text for a one-off API call: --text="...", a file, or stdin (no file, or "-")."""
+    inline = next((a.split("=", 1)[1] for a in args if a.startswith("--text=")), None)
+    files = [a for a in args if not a.startswith("--")]
+    if len(files) + (inline is not None) > 1:
+        sys.exit(f"usage: {usage}")
+    if inline is not None:
+        text = inline
+    elif files and files[0] != "-":
+        try:
+            text = Doc(files[0]).text
+        except (OSError, UnicodeDecodeError) as e:
+            sys.exit(f"Can't read {files[0]}: {e}")
+    else:
+        text = sys.stdin.read()
+    if not text.strip():
+        sys.exit(f"No text given. usage: {usage}")
+    return text.strip()
+
+def cmd_pangram(args):
+    """Score text with Pangram only."""
+    if not os.environ.get("PANGRAM_KEY"):
+        sys.exit("Set PANGRAM_KEY in the environment first.")
+    cfg, text = config(), input_text(args, 'rt pangram [file | - | --text="..."]')
+    res = pangram(text, cfg["pangram_model"])
+    print(f"Pangram ({cfg['pangram_model']}, {len(text.split())} words): AI {res['pangram_ai']:.2f}"
+          + (f" · AI-assisted {res['pangram_ai_assisted']:.2f}" if res["pangram_ai_assisted"] is not None else "")
+          + f" · humanized windows {res['humanized_windows']}"
+          + f" · {'pass' if res['pangram_ai'] < cfg['pass_threshold'] else 'no pass'} at {cfg['pass_threshold']}")
+
+def cmd_stealth(args):
+    """Rewrite text with StealthGPT only. The rewrite goes to stdout, billing and item checks to stderr.
+    Paths, numbers, code and the like are protected as in `rt run`."""
+    if not os.environ.get("STEALTH_KEY"):
+        sys.exit("Set STEALTH_KEY in the environment first.")
+    cfg, text = config(), input_text(args, 'rt stealth [file | - | --text="..."]')
+    if (words := len(text.split())) > STEALTH_MAX_WORDS:
+        sys.exit(f"The text has {words} words; StealthGPT takes at most {STEALTH_MAX_WORDS}. Split it.")
+    items = exact_items(text, {})
+    guarded, mapping = protect(text, items)
+    raw, spent, billing, _ = (tuple(stealth(guarded, {**VARIANTS[0], "via": cfg["stealth_via"]}, cfg["stealth_model"]))
+                              + (None, None))[:4]
+    keep = set(INVISIBLE.findall(text))
+    out = restore(INVISIBLE.sub(lambda m: m[0] if m[0] in keep else "", raw.replace("\r\n", "\n")), mapping).strip()
+    print(f"StealthGPT via {cfg['stealth_via']} ({cfg['stealth_model']}): billed {spent} words, "
+          f"billing mode {billing!r}, length ratio {len(out.split()) / words:.2f}", file=sys.stderr)
+    if items:
+        lost, problems = item_changes(text, out, items, ordered=cfg["stealth_via"] == "api")
+        if lost or problems:
+            print(f"WARNING: protected items changed: {lost + problems}", file=sys.stderr)
+    print(out)
+
 COMMANDS = {"run": cmd_run, "check": cmd_check, "retry": cmd_retry, "verify": cmd_verify, "backup": cmd_backup,
-            "status": cmd_status, "baseline": cmd_baseline, "guard": cmd_guard}
+            "status": cmd_status, "baseline": cmd_baseline, "guard": cmd_guard,
+            "pangram": cmd_pangram, "stealth": cmd_stealth}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:

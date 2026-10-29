@@ -52,6 +52,8 @@ and every run backs up the whole file in .revise-text/backups/.
 ## Other commands
 - `rt check`: two small Pangram checks and one StealthGPT rewrite, to confirm the keys, the billing (subscription or
   API credits) and that protected items come through. Run it when setting up or when runs start failing.
+- `rt pangram [file | - | --text="…"]`: score text with Pangram only. `rt stealth [file | - | --text="…"]`:
+  one StealthGPT rewrite only, printed to stdout. Neither needs a spec or touches the file.
 - `rt status`: every target file and its state (ok, not revised, edited after revising).
 - `rt baseline [file …]`: stamp files as they are. With no files, every target never stamped (so the finish
   check ignores older files); with files, re-stamp them, e.g. after the user accepts a hand edit.

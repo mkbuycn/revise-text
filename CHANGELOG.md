@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `rt pangram` and `rt stealth`: call one API on its own, with the text inline (`--text="…"`), in a file, or on
+  stdin. `rt stealth` protects exact items like `rt run`. In a session they are
+  `/revise-text:check` and `/revise-text:rewrite`.
+
 - `rt run`: with several regions, the "draft is missing these spec items" warning checks the whole file, so
   items that belong to another region no longer show up as missing in every region.
 

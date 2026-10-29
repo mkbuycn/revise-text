@@ -247,6 +247,38 @@ class Flow(Project):
         with mock.patch.dict(os.environ, {"PANGRAM_KEY": ""}), self.assertRaises(SystemExit):
             self.rt("run", "tasks/001/instruction.md")
 
+    def test_pangram_command_inline_file_stdin(self):
+        self.write("note.md", "﻿From a file.\r\n")
+        seen = []
+        score = lambda text, model: seen.append(text) or {"pangram_ai": 0.7, "pangram_ai_assisted": None,
+                                                          "humanized_windows": 0}
+        with mock.patch.object(rt, "pangram", score):
+            out = self.rt("pangram", "--text=Inline words here")
+            self.rt("pangram", "note.md")
+            self.rt("pangram", "-", stdin="From stdin\n")
+        self.assertEqual(seen, ["Inline words here", "From a file.", "From stdin"])
+        self.assertIn("AI 0.70", out)
+        self.assertIn("no pass at 0.5", out)
+        with self.assertRaises(SystemExit):
+            self.rt("pangram", "--text=   ")
+        with self.assertRaises(SystemExit):
+            self.rt("pangram", "note.md", "--text=both")
+
+    def test_stealth_command_protects_items(self):
+        sent = []
+        def fake(text, variant, model):
+            sent.append(text)
+            return text.replace("Keep", "Hold"), 20, "subscription"
+        err = io.StringIO()
+        with mock.patch.object(rt, "stealth", fake), contextlib.redirect_stderr(err):
+            out = self.rt("stealth", "--text=Keep at most 200 rows in /out/a.csv.")
+        self.assertEqual(out, "Hold at most 200 rows in /out/a.csv.\n")
+        self.assertNotIn("200", sent[0])
+        self.assertIn("billed 20 words", err.getvalue())
+        self.assertNotIn("WARNING", err.getvalue())
+        with mock.patch.dict(os.environ, {"STEALTH_KEY": ""}), self.assertRaises(SystemExit):
+            self.rt("stealth", "--text=x")
+
 
 
 class ReviewFindings(Project):
