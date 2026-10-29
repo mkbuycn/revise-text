@@ -153,11 +153,11 @@ becoming "at least" is for the meaning check to catch, which is why limits belon
 **APIs used.** Pangram: `POST https://text.external-api.pangram.com/task`, then poll `GET /task/{id}`; reads
 `fraction_ai`, `fraction_ai_assisted` and each window's `is_humanized`. StealthGPT:
 through MCP, `humanize_text` and `get_run_status` on `https://www.stealthgpt.ai/api/mcp/mcp` (Bearer token,
-Streamable HTTP), with `model`, `outputFormat: "markdown"` and `qualityMode: "quality"`. As of 2026-10-26 the tool has no
+Streamable HTTP), with `model`, `outputFormat: "text"` (plain text) and `qualityMode: "quality"`. As of 2026-10-26 the tool has no
 preservation option (`rt` would send one if the tool's input schema ever lists it; `rt check` shows the inputs),
 but in live tests it kept the `[[E0]]` tokens, moving them with the sentences.
 Through the REST API, `POST https://www.stealthgpt.ai/api/stealthify` with `rephrase: true`,
-`preservation: true` and `outputFormat: "markdown"`. Words billed to API credits cost $0.05 per 100 (super, input
+`preservation: true` and `outputFormat: "text"` (plain text). Words billed to API credits cost $0.05 per 100 (super, input
 plus output) and go into `stealth_cost_usd`; words billed to the subscription go into
 `stealth_subscription_words`, and words whose billing StealthGPT didn't report or named in a way `rt` doesn't
 know (or a request that may have started a run and then failed) into `stealth_unknown_billing_words`. Metered

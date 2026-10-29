@@ -1150,7 +1150,7 @@ class McpRoute(Project):
         self.assertEqual((out, spent, billing), ("ALPHA [[E0]] beta", 42, "subscription"))
         self.assertEqual(fake.sessions, 1)
         args = next(c[1]["arguments"] for c in fake.calls if c[0] == "tools/call")
-        self.assertEqual(args, {"text": "alpha [[E0]] beta", "model": "super", "outputFormat": "markdown",
+        self.assertEqual(args, {"text": "alpha [[E0]] beta", "model": "super", "outputFormat": "text",
                                 "qualityMode": "quality", "preservation": True, "preservationMode": "split"})
         self.assertTrue(all(c[2] == "s1" for c in fake.calls if c[0] != "initialize"))
 

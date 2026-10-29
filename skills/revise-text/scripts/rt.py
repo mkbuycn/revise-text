@@ -479,7 +479,7 @@ def stealth(text, variant, model):
     try:
         res = request(STEALTH, {"api-token": os.environ["STEALTH_KEY"]},
                       {"prompt": text, "rephrase": True, "model": model, "preservation": True,
-                       "outputFormat": "markdown", **variant}, safe=False)
+                       "outputFormat": "text", **variant}, safe=False)
     except SentError as e:
         raise StealthRunError(str(e), None, 2 * len(text.split())) from e
     return res["result"], res.get("wordsSpent"), res.get("billingMode"), res.get("meteredChargedCredits")
@@ -588,7 +588,7 @@ def stealth_mcp(text, variant, model):
     inputs = client.tools.get("humanize_text")
     if inputs is None:
         raise RuntimeError(f"StealthGPT's MCP server has no humanize_text tool (it has {sorted(client.tools)})")
-    args = {"text": text, "model": model, "outputFormat": "markdown"}
+    args = {"text": text, "model": model, "outputFormat": "text"}
     if "qualityMode" in inputs:
         args["qualityMode"] = "quality"
     if "preservation" in inputs:                     # undocumented for MCP; used whenever the tool accepts it
