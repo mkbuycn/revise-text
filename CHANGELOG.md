@@ -5,6 +5,7 @@
 - `rt pangram` and `rt stealth`: call one API on its own, with the text inline (`--text="…"`), in a file, or on
   stdin. `rt stealth` protects exact items like `rt run`. In a session they are
   `/revise-text:check` and `/revise-text:rewrite`.
+- `rt pangram` lists the windows Pangram flagged as AI or AI-assisted, with label, confidence and character range.
 - StealthGPT is asked for plain text (`outputFormat: "text"`) instead of Markdown, on both the REST and MCP routes.
 
 - `rt run`: with several regions, the "draft is missing these spec items" warning checks the whole file, so

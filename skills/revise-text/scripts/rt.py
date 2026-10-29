@@ -450,7 +450,8 @@ def request(url, headers, body=None, tries=3, safe=True):
                 raise SentError(f"{url}: connection failed ({e})") from None
         time.sleep(2 * 2 ** i)
 
-def pangram(text, model):
+def pangram(text, model, windows=False):
+    """Scores for the text; with windows=True, also Pangram's labelled segments (kept out of run history)."""
     headers = {"x-api-key": os.environ["PANGRAM_KEY"]}
     try:
         task = request(f"{PANGRAM}/task", headers, {"text": text, "model": model}, safe=False)["task_id"]
@@ -463,7 +464,8 @@ def pangram(text, model):
         res = request(f"{PANGRAM}/task/{task}", headers)
         if res.get("stage") == "STAGE_SUCCESS":
             return {"pangram_ai": res["fraction_ai"], "pangram_ai_assisted": res.get("fraction_ai_assisted"),
-                    "humanized_windows": sum(bool(w.get("is_humanized")) for w in res.get("windows", []))}
+                    "humanized_windows": sum(bool(w.get("is_humanized")) for w in res.get("windows", [])),
+                    **({"windows": res.get("windows", [])} if windows else {})}
         if res.get("stage") == "STAGE_FAILED":
             raise RuntimeError(f"Pangram failed: {res.get('headline')}")
         time.sleep(1)
@@ -1159,11 +1161,22 @@ def cmd_pangram(args):
     if not os.environ.get("PANGRAM_KEY"):
         sys.exit("Set PANGRAM_KEY in the environment first.")
     cfg, text = config(), input_text(args, 'rt pangram [file | - | --text="..."]')
-    res = pangram(text, cfg["pangram_model"])
+    res = pangram(text, cfg["pangram_model"], windows=True)
     print(f"Pangram ({cfg['pangram_model']}, {len(text.split())} words): AI {res['pangram_ai']:.2f}"
           + (f" · AI-assisted {res['pangram_ai_assisted']:.2f}" if res["pangram_ai_assisted"] is not None else "")
           + f" · humanized windows {res['humanized_windows']}"
           + f" · {'pass' if res['pangram_ai'] < cfg['pass_threshold'] else 'no pass'} at {cfg['pass_threshold']}")
+    flagged = [w for w in res["windows"] if re.search(r"\bai\b", str(w.get("label", "")), re.I)]
+    print(f"Flagged windows: {len(flagged)} of {len(res['windows'])}")
+    for w in flagged:
+        conf = w.get("confidence")
+        score = w.get("ai_assistance_score")
+        snippet = " ".join(str(w.get("text", "")).split())
+        print(f"  [{w.get('label')}"
+              + (f" · confidence {conf:.2f}" if isinstance(conf, (int, float)) else f" · confidence {conf}" if conf else "")
+              + (f" · AI assistance {score:.2f}" if isinstance(score, (int, float)) else "")
+              + f"] chars {w.get('start_index')}–{w.get('end_index')}: "
+              + (snippet[:120].rstrip() + "…" if len(snippet) > 120 else snippet))
 
 def cmd_stealth(args):
     """Rewrite text with StealthGPT only. The rewrite goes to stdout, billing and item checks to stderr.

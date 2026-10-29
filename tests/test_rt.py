@@ -250,8 +250,12 @@ class Flow(Project):
     def test_pangram_command_inline_file_stdin(self):
         self.write("note.md", "﻿From a file.\r\n")
         seen = []
-        score = lambda text, model: seen.append(text) or {"pangram_ai": 0.7, "pangram_ai_assisted": None,
-                                                          "humanized_windows": 0}
+        windows = [{"label": "AI", "confidence": "High", "start_index": 0, "end_index": 12, "text": "Inline words"},
+                   {"label": "Human", "confidence": 0.9, "start_index": 13, "end_index": 17, "text": "here"},
+                   {"label": "AI-Assisted", "confidence": 0.55, "ai_assistance_score": 0.4, "start_index": 13,
+                    "end_index": 17, "text": "x " * 100}]
+        score = lambda text, model, **_: seen.append(text) or {
+            "pangram_ai": 0.7, "pangram_ai_assisted": None, "humanized_windows": 0, "windows": windows}
         with mock.patch.object(rt, "pangram", score):
             out = self.rt("pangram", "--text=Inline words here")
             self.rt("pangram", "note.md")
@@ -259,6 +263,11 @@ class Flow(Project):
         self.assertEqual(seen, ["Inline words here", "From a file.", "From stdin"])
         self.assertIn("AI 0.70", out)
         self.assertIn("no pass at 0.5", out)
+        self.assertIn("Flagged windows: 2 of 3", out)
+        self.assertIn("[AI · confidence High] chars 0–12: Inline words", out)
+        self.assertIn("[AI-Assisted · confidence 0.55 · AI assistance 0.40] chars 13–17: ", out)
+        self.assertIn("x x…", out)
+        self.assertNotIn("here", out.split("Flagged")[1])
         with self.assertRaises(SystemExit):
             self.rt("pangram", "--text=   ")
         with self.assertRaises(SystemExit):

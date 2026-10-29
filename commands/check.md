@@ -15,5 +15,6 @@ Arguments: $ARGUMENTS
    RT_TEXT
    ```
    With no arguments, ask the user for a file or the text.
-2. Report the line rt printed (AI score, AI-assisted, humanized windows, pass or not). Don't edit any file.
+2. Report the score line rt printed (AI score, AI-assisted, humanized windows, pass or not), then the flagged
+   windows: for each, its label, confidence and which part of the text it is. Don't edit any file.
    If a key is missing, tell the user to set `PANGRAM_KEY`.
